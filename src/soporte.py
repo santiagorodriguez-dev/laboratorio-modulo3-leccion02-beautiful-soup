@@ -2,6 +2,7 @@
 # Tratamiento de datos
 # -----------------------------------------------------------------------
 import pandas as pd # type: ignore
+import numpy as np
 
 def get_data_elemento_text(elemento, p1, p2 ,p3):
     """
@@ -24,7 +25,7 @@ def get_data_elemento_text(elemento, p1, p2 ,p3):
         for v in elemento.findAll(p1, {p2: p3}):
             return v.getText().replace("\xa0\xa0"," ").strip()
     except:
-        return ""
+        return np.nan
 
 def get_data_elemento_imagen(elemento, p1, ruta, no_image):
     """

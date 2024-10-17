@@ -17,29 +17,38 @@ from src import soporte as sp
 import pandas as pd # type: ignore
 
 async def tratar_datos(url):
-        print(f"Inicio llamada {url}")
-        url_imagen = "https://atrezzovazquez.es/"
-        url_no_imagen = "https://atrezzovazquez.es/img/logo.png"
-        res = requests.get(url)
-        sopa = BeautifulSoup(res.content, "html.parser")
+        df_productos_paginas = pd.DataFrame()
+        status = ''
+        print(f"1.Inicio llamada {url}")
+        try:
+            url_imagen = "https://atrezzovazquez.es/"
+            url_no_imagen = "https://atrezzovazquez.es/img/logo.png"
+            res = requests.get(url)
+            status = res.status_code
+            print(f"2. status code: {status}")
+            if res.status_code == 200:
+                sopa = BeautifulSoup(res.content, "html.parser")
+                if (len(sopa)!= 0):
+                    elementos = sopa.findAll("div", {"class": "col-md-3 col-sm-4 shop-grid-item"})
 
-        elementos = sopa.findAll("div", {"class": "col-md-3 col-sm-4 shop-grid-item"})
+                    for e in elementos:
+                        df_temp = pd.DataFrame()
+                        ele = BeautifulSoup(str(e), "html.parser")
+                            
+                        nombre = sp.get_data_elemento_text(ele, 'a', 'class', 'title')
+                        categoria = sp.get_data_elemento_text(ele, 'a', 'class', 'tag')
+                        seccion = sp.get_data_elemento_text(ele, 'div', 'class', 'cat-sec')
+                        descripcion = sp.get_data_elemento_text(ele, 'div', 'class', 'article-container style-1')
+                        dimensiones = sp.get_data_elemento_text(ele, 'div', 'class', 'price')
+                        imagen = sp.get_data_elemento_imagen(ele, 'src', url_imagen, url_no_imagen)
 
-        for e in elementos:
-            ele = BeautifulSoup(str(e), "html.parser")
-                
-            nombre = sp.get_data_elemento_text(ele, 'a', 'class', 'title')
-            categoria = sp.get_data_elemento_text(ele, 'a', 'class', 'tag')
-            seccion = sp.get_data_elemento_text(ele, 'div', 'class', 'cat-sec')
-            descripcion = sp.get_data_elemento_text(ele, 'div', 'class', 'article-container style-1')
-            dimensiones = sp.get_data_elemento_text(ele, 'div', 'class', 'price')
-            imagen = sp.get_data_elemento_imagen(ele, 'src', url_imagen, url_no_imagen)
+                        df_temp = sp.create_dataframe(nombre, categoria, seccion, descripcion, dimensiones, imagen)
+                        df_productos_paginas = pd.concat([df_productos_paginas, df_temp])
+        except:
+            print(f"4. error en la llamada {url}, status code: {status}")
 
-            df_producto = sp.create_dataframe(nombre, categoria, seccion, descripcion, dimensiones, imagen)
-
-        print(f"fin llamada {url}")
-
-        return df_producto
+        print(f"5.fin llamada {url}")
+        return df_productos_paginas
 
 
 async def main():
@@ -49,7 +58,7 @@ async def main():
     # Creamos una lista de tareas para realizar solicitudes a 100 páginas
     tareas = []
 
-    for i in range(1, 3):
+    for i in range(1, 101):
         url = url_base.format(i)
         tareas.append(tratar_datos(url))
 
@@ -59,12 +68,11 @@ async def main():
 
     for i, r in enumerate(lista_resultado, 1):
             df_temp = pd.DataFrame(r)
-            print(type(df_temp))
             df = pd.concat([df, df_temp])
             df.reset_index(drop=True, inplace=True)
 
     print(f"cantidad {df.shape[0]}")
-    print(df.sample())
+    print(df.head())
 
     end_time = time.time()
     print(f"\nEl scrapeo TOTAL duró {end_time - start_time:.2f} segundos.")
